@@ -1,0 +1,22 @@
+{
+  "name": "vert-editor",
+  "version": "0.1.0",
+  "authors": [
+    "Takashi Toyoshima <toyoshim@gmail.com>"
+  ],
+  "description": "Vertical Text Editor",
+  "main": "vert-editor/vert-editor.html",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#~0.3.4",
+    "paper-elements": "Polymer/paper-elements#~0.3.4"
+  }
+}

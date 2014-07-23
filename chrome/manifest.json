@@ -1,0 +1,17 @@
+{
+  "manifest_version": 2,
+  "name": "クルピヨン！",
+  "description": "縦書きエディタ ♡ クルピヨン！",
+  "version": "0.0.1",
+  "minimum_chrome_version": "23",
+  "icons": {
+    "16": "assets/icon16.png",
+    "128": "assets/icon128.png",
+    "256": "assets/icon256.png"
+  },
+  "app": {
+    "background": {
+      "scripts": ["background.js"]
+    }
+  }
+}

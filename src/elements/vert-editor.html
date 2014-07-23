@@ -1,0 +1,229 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<polymer-element name="vert-editor"
+                 attributes="rows lines space cellsize border background">
+    <template>
+        <div style="position: relative">
+            <span id="caret"></span>
+            <span id="input" contenteditable="true"></span>
+            <span id="root"></span>
+        </div>
+    </template>
+
+    <script>
+        function isHighSurrogates(c) {
+            var code = c.charCodeAt(0);
+            return 0xd800 <= code && code <= 0xdbff;
+        }
+
+        function countUcs2Length(s) {
+            var count = 0;
+            for (var i = 0; i < s.length; ++i) {
+                if (isHighSurrogates(s[i])) {
+                    if (i + 1 == s.length)
+                        break;
+                    ++i;
+                }
+                ++count;
+            }
+            return count;
+        }
+
+        function onInput(e) {
+            if (this._composition)
+                return;
+            var input = this.$.input;
+            if (this._compositingtext == input.innerText) {
+                this._compositingtext = '';
+                input.innerText = '';
+                return;
+            }
+            this._handleInput(input.innerText);
+            input.innerText = '';
+        }
+
+        function onPaste(e) {
+            e.preventDefault();
+            this._handleInput(e.clipboardData.getData('text/plain'));
+        }
+
+        function onKeyup(e) {
+            if (this._composition)
+                return;
+            switch (e.which) {
+                case 8:  // Del
+                case 13:  // Enter
+                    this._handleInput(String.fromCharCode(e.which));
+                    break;
+            }
+        }
+        function onCompositionStart() {
+            this._composition = true;
+            this._compositingtext = '';
+        }
+
+        function onCompositionUpdate(e) {
+            var oldcount = countUcs2Length(this._compositingtext);
+            this._compositingtext = e.data;
+            for (var del = 0; del < oldcount; ++del)
+                this._handleInput(String.fromCharCode(8));
+            this._handleInput(e.data);
+        }
+
+        function onCompositionEnd() {
+            this._composition = false;
+            this.$.input.innerText = '';
+        }
+
+        (function() {
+            Polymer('vert-editor', {
+                // Default attributes.
+                rows: 20,
+                lines: 20,
+                space: 8,
+                cellsize: 16,
+                border: null,
+                background: '#ccbb99',
+
+                // Private variables.
+                _width: 0,
+                _height: 0,
+                _fontsize: '',
+                _lines: null,
+                _observer: null,
+                _composition: false,
+                _compositingtext: '',
+                _caret: { line: 0, row: 0, show: true },
+
+                ready: function() {
+                    this._width = this.lines * (this.cellsize + this.space) + this.cellsize * 2;
+                    this._height = (this.rows + 2) * this.cellsize;
+                    this._fontsize = this.cellsize;
+                    this._lines = new Array(this.lines);
+                    if (this.border)
+                        this._fontsize--;
+
+                    // Setup caret and input styles, and callbacks.
+                    var caret = this.$.caret;
+                    caret.style.width = (this.cellsize - 4) + 'px';
+                    caret.style.height = '1px';
+                    caret.style.position = 'absolute';
+                    caret.style.zIndex = 2;
+                    caret.style.display = 'inline-block';
+                    caret.style.backgroundColor = this.border;
+                    setInterval(function() {
+                        var show = this._caret.show;
+                        this._caret.show = !show;
+                        var caret = this.$.caret;
+                        caret.style.display = show ? 'inline-block' : 'none';
+                    }.bind(this), 500);
+                    var input = this.$.input;
+                    input.style.webkitWritingMode = 'vertical-rl';
+                    input.style.opacity = 0;
+                    input.style.width = this.cellsize + 'px';
+                    input.style.height = this.cellsize + 'px';
+                    input.style.position = 'absolute';
+                    input.style.zIndex = 1;
+                    input.style.outline = 'none';
+                    input.style.display = 'inline-block';
+                    input.addEventListener('input', onInput.bind(this));
+                    input.addEventListener('paste', onPaste.bind(this));
+                    input.addEventListener('keyup', onKeyup.bind(this));
+                    input.addEventListener('compositionstart', onCompositionStart.bind(this));
+                    input.addEventListener('compositionupdate', onCompositionUpdate.bind(this));
+                    input.addEventListener('compositionend', onCompositionEnd.bind(this));
+                    this.moveTo(0, 0);
+
+                    // Setup cells.
+                    var root = this.$.root;
+                    root.style.webkitWritingMode = 'vertical-rl';
+                    root.style.fontFamily = 'monospace';
+                    root.style.fontSize = this._fontsize + 'px';
+                    root.style.backgroundColor = this.background;
+                    root.style.width = this._width + 'px';
+                    root.style.height = this._height + 'px';
+                    root.style.display = 'inline-block';
+
+                    for (var i = 0; i < this.lines; ++i) {
+                        this._lines[i] = new Array(this.rows + 1);
+                        if (this.space !== 0 || i === 0) {
+                            var space = document.createElement('div');
+                            var width = this.space - 1;
+                            if (width < 0)
+                                width = 0;
+                            space.style.width = width + 'px';
+                            space.style.height = (this.cellsize * this.rows + 1) + 'px';
+                            space.style.marginTop = this.cellsize + 'px';
+                            if (this.border)
+                                space.style.border = 'solid';
+                            space.style.borderWidth = '0px 0px 0px 1px';  // Left = 1px
+                            space.style.borderColor = this.border;
+                            if (i === 0)
+                                space.style.marginRight = this.cellsize + 'px';
+                            root.appendChild(space);
+                        }
+                        var line = document.createElement('div');
+                        line.style.width = this.cellsize + 'px';
+                        line.style.height = (this.cellsize * (this.rows + 1)) + 'px';
+                        line.style.marginTop = this.cellsize + 'px';
+                        for (var j = 0; j <= this.rows; ++j) {
+                            var cell = document.createElement('span');
+                            var height = this.cellsize - 1;
+                            if (j == this.rows)
+                                height--;
+                            cell.style.width = (this.cellsize - 1) + 'px';
+                            cell.style.height = height + 'px';
+                            if (this.border)
+                                cell.style.border = 'solid';
+                            cell.style.borderColor = this.border;
+                            cell.style.borderWidth = '1px 0px 0px 0px';
+                            if (j != this.rows)
+                                cell.style.borderLeftWidth = '1px';
+                            cell.style.display = 'inline-block';
+                            cell.textContent = '';
+                            line.appendChild(cell);
+                            this._lines[i][j] = cell;
+                        }
+                        root.appendChild(line);
+                    }
+                },
+
+                moveTo: function(line, row) {
+                    this._caret.line = line;
+                    this._caret.row = row;
+                    var left = this._width - this.cellsize - (this.cellsize + this.space) * (line + 1);
+                    var top = this.cellsize * (row + 1);
+                    var input = this.$.input;
+                    input.style.left = left + 'px';
+                    input.style.top = top + 'px';
+                    var caret = this.$.caret;
+                    caret.style.left = (left + 2) + 'px';
+                    caret.style.top = (top + 2) + 'px';
+                },
+
+                setTo: function(line, row, character) {
+                    this._lines[line][row].textContent = character;
+                },
+
+                _handleInput: function(text) {
+                    var length = text.length;
+                    for (var i = 0; i < length; ++i) {
+                        if (isHighSurrogates(text[i])) {
+                            this._handleSingleInput(text.substr(i, 2));
+                            ++i;
+                        } else {
+                            this._handleSingleInput(text[i]);
+                        }
+                    }
+                },
+
+                _handleSingleInput: function(text) {
+                    if (this.onInput)
+                        return this.onInput(this._caret.line, this._caret.row, text);
+                },
+
+                onInput: null
+            });
+        })();
+    </script>
+</polymer-element>

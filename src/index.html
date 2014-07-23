@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="bower_components/platform/platform.js"></script>
+        <script src="third_party/jslt/Unicode.js"></script>
+        <script src="third_party/jslt/TextModel.js"></script>
+        <script src="third_party/jslt/ScreenModel.js"></script>
+        <link rel="import" href="bower_components/core-icons/core-icons.html">
+        <link rel="import" href="bower_components/core-toolbar/core-toolbar.html">
+        <link rel="import" href="bower_components/paper-icon-button/paper-icon-button.html">
+        <link rel="import" href="bower_components/paper-tabs/paper-tabs.html">
+        <link rel="import" href="elements/vert-editor.html">
+        <title>縦書きエディタ ♡ クルピヨン！</title>
+        <style>
+            core-toolbar {
+                color: #f1f1f1;
+                fill: #f1f1f1;
+                background: #ff77bb;
+                height: 112px;
+            }
+            paper-tabs.transparent-teal {
+                background-color: #ffffff;
+                color: #ff88cc;
+                box-shadow: none;
+            }
+            paper-tabs.transparent-teal::shadow #selectionBar {
+                background-color: #ff88cc;
+            }
+            paper-tabs.transparent-teal paper-tab::shadow #ink {
+                color: #ff88cc;
+            }
+        </style>
+    </head>
+    <body style="margin:0; width: 600px; height: 570px">
+        <script>
+            window.addEventListener('polymer-ready', function(e) {
+                var editor = document.querySelector('vert-editor');
+                var text = new TextModel();
+                var model = new ScreenModel(20, 20, text, 0);
+                model.onMove = function (line, row) {
+                    editor.moveTo(line, row);
+                };
+                model.onUpdateLine = function (line) {
+                    for (var i = 0; i <= 20; ++i)
+                        editor.setTo(line, i, model.getCharacterAt(line, i));
+                };
+                editor.onInput = function (line, row, text) {
+                    console.log(text.charCodeAt(0));
+                    if (text == String.fromCharCode(0x08)) {
+                        if (model.moveBackward())
+                            model.remove();
+                    } else {
+                        model.insert(text);
+                    }
+                };
+            });
+        </script>
+        <core-toolbar>
+            <paper-icon-button icon="menu"></paper-icon-button>
+            <div flex>縦書きエディタ ♡ クルピヨン！</div>
+            <paper-icon-button icon="search"></paper-icon-button>
+            <paper-icon-button icon="more-vert"></paper-icon-button>
+            <div class="bottom fit" horizontal layout>
+                <paper-tabs selected="0" flex class="transparent-teal">
+                    <paper-tab>乙女の事情で名称未設定</paper-tab>
+                </paper-tabs>
+            </div>
+        </core-toolbar>
+        <vert-editor cellsize=20 border="#666666" background="#ffeeff"></vert-editor>
+    </body>
+</html>

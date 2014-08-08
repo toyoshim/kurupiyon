@@ -1,6 +1,6 @@
 chrome.app.runtime.onLaunched.addListener(function() {
   chrome.app.window.create(
-    "static/index.html",
+    "static/main.html",
     {
       id: "main",
       bounds: {

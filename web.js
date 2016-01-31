@@ -6,11 +6,10 @@ var app = express();
 
 var url = process.env.MONGOLAB_URI;
 if (url) {
-  var log = momolog();
   var collection = process.env.DEBUG ? 'log-debug' : 'log';
   console.log('col: ' + collection);
-  log.connect(url, collection).then(function() {
-    app.use(log.morgan());
+  momolog.connect(url, collection).then(function(logger) {
+    app.use(logger);
     main();
   });
 } else {

@@ -1,10 +1,11 @@
 var express = require("express");
 var logfmt = require("logfmt");
-var momolog = require("momolog");
+//var momolog = require("momolog");
 
 var app = express();
 
-var url = process.env.MONGOLAB_URI;
+//var url = process.env.MONGOLAB_URI;
+var url = false;
 if (url) {
   var collection = process.env.DEBUG ? 'log-debug' : 'log';
   console.log('col: ' + collection);
